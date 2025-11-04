@@ -2,8 +2,16 @@
   "startUrls": [
     "https://example.com"
   ],
+  "ignoredUrls": [],
+  "ignoredWords": [
+    "^[0-9]+$",
+    "^[a-z]$",
+    "^(the|a|an|and|or|but|of|to|in|on|at|for|with|by|from|as|is|was|are|be|been|has|have|had|do|does|did)$"
+  ],
   "maxDepth": 2,
   "timeoutSeconds": 5,
   "popularWordCount": 10,
-  "outputPath": "output.json"
+  "parallelism": -1,
+  "outputPath": "output.json",
+  "profileOutputPath": ""
 }

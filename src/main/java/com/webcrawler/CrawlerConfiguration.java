@@ -1,27 +1,23 @@
 package com.webcrawler;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Configuration class for web crawler settings.
  */
 public class CrawlerConfiguration {
-    private List<String> startUrls;
+    private List<String> startUrls = new ArrayList<>();
+    private List<String> ignoredUrls = new ArrayList<>();
+    private List<String> ignoredWords = new ArrayList<>();
     private int maxDepth;
     private int timeoutSeconds;
     private int popularWordCount;
-    private String outputPath;
+    private int parallelism = -1;
+    private String outputPath = "";
+    private String profileOutputPath = "";
 
     public CrawlerConfiguration() {
-    }
-
-    public CrawlerConfiguration(List<String> startUrls, int maxDepth, int timeoutSeconds, 
-                                int popularWordCount, String outputPath) {
-        this.startUrls = startUrls;
-        this.maxDepth = maxDepth;
-        this.timeoutSeconds = timeoutSeconds;
-        this.popularWordCount = popularWordCount;
-        this.outputPath = outputPath;
     }
 
     public List<String> getStartUrls() {
@@ -29,7 +25,23 @@ public class CrawlerConfiguration {
     }
 
     public void setStartUrls(List<String> startUrls) {
-        this.startUrls = startUrls;
+        this.startUrls = startUrls != null ? startUrls : new ArrayList<>();
+    }
+
+    public List<String> getIgnoredUrls() {
+        return ignoredUrls;
+    }
+
+    public void setIgnoredUrls(List<String> ignoredUrls) {
+        this.ignoredUrls = ignoredUrls != null ? ignoredUrls : new ArrayList<>();
+    }
+
+    public List<String> getIgnoredWords() {
+        return ignoredWords;
+    }
+
+    public void setIgnoredWords(List<String> ignoredWords) {
+        this.ignoredWords = ignoredWords != null ? ignoredWords : new ArrayList<>();
     }
 
     public int getMaxDepth() {
@@ -56,11 +68,27 @@ public class CrawlerConfiguration {
         this.popularWordCount = popularWordCount;
     }
 
+    public int getParallelism() {
+        return parallelism;
+    }
+
+    public void setParallelism(int parallelism) {
+        this.parallelism = parallelism;
+    }
+
     public String getOutputPath() {
         return outputPath;
     }
 
     public void setOutputPath(String outputPath) {
-        this.outputPath = outputPath;
+        this.outputPath = outputPath != null ? outputPath : "";
+    }
+
+    public String getProfileOutputPath() {
+        return profileOutputPath;
+    }
+
+    public void setProfileOutputPath(String profileOutputPath) {
+        this.profileOutputPath = profileOutputPath != null ? profileOutputPath : "";
     }
 }

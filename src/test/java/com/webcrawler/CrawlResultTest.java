@@ -16,13 +16,11 @@ public class CrawlResultTest {
         wordCounts.put("test", 5);
         wordCounts.put("example", 3);
 
-        Set<String> urls = new HashSet<>();
-        urls.add("http://example.com");
-        urls.add("http://test.com");
+        int urlsVisited = 2;
 
-        CrawlResult result = new CrawlResult(wordCounts, urls);
+        CrawlResult result = new CrawlResult(wordCounts, urlsVisited);
 
         assertEquals(wordCounts, result.getWordCounts());
-        assertEquals(urls, result.getUrlsVisited());
+        assertEquals(urlsVisited, result.getUrlsVisited());
     }
 }

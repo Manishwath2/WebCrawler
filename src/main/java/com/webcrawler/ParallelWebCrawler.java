@@ -6,12 +6,14 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveTask;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * Parallel implementation of WebCrawler using ForkJoinPool.
@@ -21,32 +23,56 @@ public class ParallelWebCrawler implements WebCrawler {
     private final ConcurrentHashMap<String, Integer> wordCounts;
     private final Set<String> visitedUrls;
     private final ForkJoinPool forkJoinPool;
-    private final Pattern wordPattern;
+    private final Clock clock;
+    private final Instant deadline;
+    private final List<Pattern> ignoredUrlPatterns;
+    private final List<Pattern> ignoredWordPatterns;
 
     public ParallelWebCrawler(CrawlerConfiguration config) {
+        this(config, Clock.systemUTC());
+    }
+
+    public ParallelWebCrawler(CrawlerConfiguration config, Clock clock) {
         this.config = config;
+        this.clock = clock;
         this.wordCounts = new ConcurrentHashMap<>();
         this.visitedUrls = ConcurrentHashMap.newKeySet();
-        this.forkJoinPool = new ForkJoinPool();
-        this.wordPattern = Pattern.compile("\\w+");
+        
+        // Configure parallelism
+        int parallelism = config.getParallelism();
+        if (parallelism < 1) {
+            parallelism = Runtime.getRuntime().availableProcessors();
+        }
+        this.forkJoinPool = new ForkJoinPool(parallelism);
+        
+        // Set deadline for timeout
+        this.deadline = clock.instant().plus(Duration.ofSeconds(config.getTimeoutSeconds()));
+        
+        // Compile regex patterns for ignored URLs
+        this.ignoredUrlPatterns = new ArrayList<>();
+        for (String regex : config.getIgnoredUrls()) {
+            ignoredUrlPatterns.add(Pattern.compile(regex));
+        }
+        
+        // Compile regex patterns for ignored words
+        this.ignoredWordPatterns = new ArrayList<>();
+        for (String regex : config.getIgnoredWords()) {
+            ignoredWordPatterns.add(Pattern.compile(regex));
+        }
     }
 
     @Override
     @Profiled
     public CrawlResult crawl() {
-        List<CrawlTask> tasks = config.getStartUrls().stream()
-                .map(url -> new CrawlTask(url, config.getMaxDepth()))
-                .collect(Collectors.toList());
-
-        for (CrawlTask task : tasks) {
-            forkJoinPool.invoke(task);
+        for (String url : config.getStartUrls()) {
+            forkJoinPool.invoke(new CrawlTask(url, config.getMaxDepth()));
         }
-
+        
         forkJoinPool.shutdown();
-
+        
         return new CrawlResult(
-                new HashMap<>(wordCounts),
-                new HashSet<>(visitedUrls)
+            new HashMap<>(wordCounts),
+            visitedUrls.size()
         );
     }
 
@@ -64,8 +90,18 @@ public class ParallelWebCrawler implements WebCrawler {
 
         @Override
         protected Void compute() {
+            // Check timeout - stop fetching new pages if deadline passed
+            if (clock.instant().isAfter(deadline)) {
+                return null;
+            }
+            
             // Base cases
             if (depth <= 0 || !visitedUrls.add(url)) {
+                return null;
+            }
+            
+            // Check if URL should be ignored
+            if (shouldIgnoreUrl(url)) {
                 return null;
             }
 
@@ -79,8 +115,8 @@ public class ParallelWebCrawler implements WebCrawler {
                 String text = doc.body().text();
                 countWords(text);
 
-                // Extract links and create subtasks
-                if (depth > 1) {
+                // Extract links and create subtasks only if we haven't timed out
+                if (depth > 1 && clock.instant().isBefore(deadline)) {
                     Elements links = doc.select("a[href]");
                     List<CrawlTask> subtasks = new ArrayList<>();
 
@@ -95,18 +131,28 @@ public class ParallelWebCrawler implements WebCrawler {
                     invokeAll(subtasks);
                 }
             } catch (IOException e) {
+                // URL is still considered "visited" even if request fails
                 // Silently ignore connection errors
-                System.err.println("Error crawling " + url + ": " + e.getMessage());
             }
 
             return null;
+        }
+
+        private boolean shouldIgnoreUrl(String url) {
+            for (Pattern pattern : ignoredUrlPatterns) {
+                if (pattern.matcher(url).matches()) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private boolean isValidUrl(String url) {
             return url != null 
                     && !url.isEmpty() 
                     && (url.startsWith("http://") || url.startsWith("https://"))
-                    && !visitedUrls.contains(url);
+                    && !visitedUrls.contains(url)
+                    && !shouldIgnoreUrl(url);
         }
 
         private void countWords(String text) {
@@ -116,10 +162,19 @@ public class ParallelWebCrawler implements WebCrawler {
 
             String[] words = text.toLowerCase().split("\\W+");
             for (String word : words) {
-                if (word.length() > 0 && wordPattern.matcher(word).matches()) {
+                if (word.length() > 0 && !shouldIgnoreWord(word)) {
                     wordCounts.merge(word, 1, Integer::sum);
                 }
             }
+        }
+
+        private boolean shouldIgnoreWord(String word) {
+            for (Pattern pattern : ignoredWordPatterns) {
+                if (pattern.matcher(word).matches()) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 }
