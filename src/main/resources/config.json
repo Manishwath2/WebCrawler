@@ -1,0 +1,9 @@
+{
+  "startUrls": [
+    "https://example.com"
+  ],
+  "maxDepth": 2,
+  "timeoutSeconds": 5,
+  "popularWordCount": 10,
+  "outputPath": "output.json"
+}
