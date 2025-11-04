@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 /**
  * Writes crawl results to JSON file.
  */
-public class ResultWriter {
+public class ResultWriter implements ResultWriterInterface {
     private final Gson gson;
 
     public ResultWriter() {

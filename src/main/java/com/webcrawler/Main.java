@@ -14,8 +14,8 @@ public class Main {
             System.out.println("Loading configuration from: " + configPath);
 
             // Load configuration with profiling
-            ConfigurationLoader loader = new ConfigurationLoader();
-            ConfigurationLoader profiledLoader = PerformanceProfiler.wrap(loader);
+            ConfigLoader loader = new ConfigurationLoader();
+            ConfigLoader profiledLoader = PerformanceProfiler.wrap(loader);
             CrawlerConfiguration config = profiledLoader.load(configPath);
 
             System.out.println("Configuration loaded:");
@@ -37,8 +37,8 @@ public class Main {
 
             // Write results with profiling
             System.out.println("\nWriting results...");
-            ResultWriter writer = new ResultWriter();
-            ResultWriter profiledWriter = PerformanceProfiler.wrap(writer);
+            ResultWriterInterface writer = new ResultWriter();
+            ResultWriterInterface profiledWriter = PerformanceProfiler.wrap(writer);
             profiledWriter.write(result, config.getOutputPath(), config.getPopularWordCount());
 
             System.out.println("\n=== Crawl Complete ===");

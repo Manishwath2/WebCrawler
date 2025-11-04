@@ -10,7 +10,7 @@ import java.io.Reader;
 /**
  * Loads crawler configuration from JSON file.
  */
-public class ConfigurationLoader {
+public class ConfigurationLoader implements ConfigLoader {
     private final Gson gson;
 
     public ConfigurationLoader() {
